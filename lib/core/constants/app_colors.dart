@@ -28,11 +28,6 @@ class AppColors {
   // Border Color
   static const Color gradientBorder = Color(0xFFEEEEEE);
   // Gradients
-  static const LinearGradient bgGradient = LinearGradient(
-    colors: [Color(0xFF3F0306), Color(0xFF090909)],
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-  );
 
   static const LinearGradient popularCardGradient = LinearGradient(
     colors: [Color(0xFF5949E6), Color(0xFFE50914)],
@@ -51,4 +46,37 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  /// Linear + Radial glow
+  static const LinearGradient _linear = LinearGradient(
+    colors: [
+      Color(0xFF2D0808), // Üst - koyu kırmızımsı
+      Color(0xFF1A0404), // Logo seviyesi - çok koyu kırmızı
+      Color(0xFF000000), // Siyah
+    ],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    stops: [0.0, 0.35, 0.6],
+  );
+
+  static const RadialGradient _radial = RadialGradient(
+    center: Alignment.topCenter,
+    radius: 1.1,
+    colors: [
+      Color(0xB0FF1B1B), // Daha belirgin kırmızı ışık
+      Color(0x208D0000), // Orta ton koyu kırmızı
+      Colors.transparent, // Şeffaf
+    ],
+    stops: [0.0, 0.35, 0.7],
+  );
+
+  static Widget combinedBg({Widget? child}) {
+    return Stack(
+      children: [
+        Container(decoration: const BoxDecoration(gradient: _linear)),
+        Container(decoration: const BoxDecoration(gradient: _radial)),
+        if (child != null) child!,
+      ],
+    );
+  }
 }
