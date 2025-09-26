@@ -5,9 +5,10 @@ class AppStrings {
   // Authentication
   static const String login = 'Giriş Yap';
   static const String register = 'Kaydol';
+  static const String register2 = "Kayıt Ol";
   static const String createAccount = 'Hesap Oluştur';
   static const String logout = 'Çıkış Yap';
-  static const String forgotPassword = 'Şifre Unuttum';
+  static const String forgotPassword = 'Şifremi Unuttum';
   static const String rememberMe = 'Beni Hatırla';
   static const String alreadyHaveAccount = 'Bir hesabın yok mu?';
   static const String dontHaveAccount = 'Bir hesabın yok mu?';

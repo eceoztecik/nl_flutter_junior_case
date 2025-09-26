@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:jr_case_boilerplate/features/auth/views/login_view.dart';
 import 'package:jr_case_boilerplate/features/splash/view/splash_view.dart';
 import 'app_routes.dart';
 
@@ -10,8 +11,7 @@ abstract class AppRouter {
         return _createRoute(const SplashScreen());
 
       case AppRoutes.login:
-        // return _createRoute(const LoginView());
-        return _createRoute(_placeholderPage('Login'));
+        return _createRoute(const LoginView());
 
       case AppRoutes.register:
         // return _createRoute(const RegisterView());
@@ -26,7 +26,7 @@ abstract class AppRouter {
   static Map<String, WidgetBuilder> getRoutes() {
     return {
       AppRoutes.splash: (context) => const SplashScreen(),
-      AppRoutes.login: (context) => _placeholderPage('Login'),
+      AppRoutes.login: (context) => const LoginView(),
       AppRoutes.register: (context) => _placeholderPage('Register'),
     };
   }
