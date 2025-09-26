@@ -26,4 +26,14 @@ mixin ValidatorsMixin {
     }
     return null;
   }
+
+  String? validatePasswordConfirmation(String? value, String password) {
+    if (value == null || value.isEmpty) {
+      return 'Şifre tekrarı gerekli';
+    }
+    if (value != password) {
+      return 'Şifreler eşleşmiyor';
+    }
+    return null;
+  }
 }
