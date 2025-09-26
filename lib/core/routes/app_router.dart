@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jr_case_boilerplate/features/auth/views/login_view.dart';
 import 'package:jr_case_boilerplate/features/auth/views/register_view.dart';
+import 'package:jr_case_boilerplate/features/home/view/home_view.dart';
 import 'package:jr_case_boilerplate/features/splash/view/splash_view.dart';
 import 'app_routes.dart';
 
@@ -15,8 +16,9 @@ abstract class AppRouter {
         return _createRoute(const LoginView());
 
       case AppRoutes.register:
-        // return _createRoute(const RegisterView());
         return _createRoute(const RegisterView());
+      case AppRoutes.home:
+        return _createRoute(const HomePage());
 
       default:
         return _createRoute(_placeholderPage('404 - Page Not Found'));
@@ -29,6 +31,7 @@ abstract class AppRouter {
       AppRoutes.splash: (context) => const SplashScreen(),
       AppRoutes.login: (context) => const LoginView(),
       AppRoutes.register: (context) => const RegisterView(),
+      AppRoutes.home: (context) => const HomePage(),
     };
   }
 
