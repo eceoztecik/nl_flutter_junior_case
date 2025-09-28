@@ -50,7 +50,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
         await Future.delayed(const Duration(seconds: 2));
 
         if (mounted) {
-          Navigator.pushNamed(context, '/home');
+          Navigator.pushNamed(context, '/profile-photo-upload');
         }
       } catch (e) {
         // Handle registration errors
