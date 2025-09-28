@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:jr_case_boilerplate/features/auth/views/login_view.dart';
 import 'package:jr_case_boilerplate/features/auth/views/register_view.dart';
 import 'package:jr_case_boilerplate/features/home/view/home_view.dart';
+import 'package:jr_case_boilerplate/features/profile/view/profile_view.dart';
 import 'package:jr_case_boilerplate/features/splash/view/splash_view.dart';
+import 'package:jr_case_boilerplate/features/upload_photo/view/upload_photo_view.dart';
+import 'package:jr_case_boilerplate/tab_container.dart';
 import 'app_routes.dart';
 
 abstract class AppRouter {
@@ -18,7 +21,11 @@ abstract class AppRouter {
       case AppRoutes.register:
         return _createRoute(const RegisterView());
       case AppRoutes.home:
-        return _createRoute(const HomePage());
+        return _createRoute(TabContainer());
+      case AppRoutes.profilePhotoUpload:
+        return _createRoute(const ProfilePhotoUploadPage());
+      case AppRoutes.profile:
+        return _createRoute(const ProfilePage());
 
       default:
         return _createRoute(_placeholderPage('404 - Page Not Found'));
@@ -31,7 +38,8 @@ abstract class AppRouter {
       AppRoutes.splash: (context) => const SplashScreen(),
       AppRoutes.login: (context) => const LoginView(),
       AppRoutes.register: (context) => const RegisterView(),
-      AppRoutes.home: (context) => const HomePage(),
+      AppRoutes.home: (context) => TabContainer(),
+      AppRoutes.profile: (context) => const ProfilePage(),
     };
   }
 
