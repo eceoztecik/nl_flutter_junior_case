@@ -216,21 +216,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-
-          // Fixed Bottom Navigation Bar
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: NavBarView(
-              selectedView: NavBarViews.home,
-              onItemTapped: (NavBarViews view) {
-                if (view == NavBarViews.profile) {
-                  Navigator.pushNamed(context, view.route);
-                }
-              },
-            ),
-          ),
         ],
       ),
     );
