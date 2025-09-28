@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:jr_case_boilerplate/core/constants/app_colors.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
 import 'package:jr_case_boilerplate/core/constants/app_text_styles.dart';
 import 'package:jr_case_boilerplate/core/constants/app_paddings.dart';
 import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
 import 'package:jr_case_boilerplate/core/widgets/bottom_sheet/offer_bottom_sheet.dart';
+import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
 import 'package:jr_case_boilerplate/features/nav_bar/enums/nav_bar_views.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/extensions/nav_bar_views_ext.dart';
 import 'package:jr_case_boilerplate/features/nav_bar/view/nav_bar_view.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -28,6 +29,17 @@ class _ProfilePageState extends State<ProfilePage> {
         statusBarIconBrightness: Brightness.light,
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refreshProfile();
+    });
+  }
+
+  void _refreshProfile() {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.isAuthenticated) {
+      authProvider.getProfile();
+    }
   }
 
   void _showLimitedOfferBottomSheet() {
@@ -37,6 +49,15 @@ class _ProfilePageState extends State<ProfilePage> {
       isScrollControlled: true,
       builder: (context) => const LimitedOfferPopup(),
     );
+  }
+
+  void _logout() async {
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.logout();
+
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 
   @override
@@ -106,108 +127,169 @@ class _ProfilePageState extends State<ProfilePage> {
           AppStrings.profileTitle,
           style: _getResponsiveHeaderStyle(screenWidth),
         ),
-        GestureDetector(
-          onTap: _showLimitedOfferBottomSheet,
-          child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: screenWidth >= 768 ? 20 : 16,
-              vertical: screenWidth >= 768 ? 12 : 10,
-            ),
-            decoration: BoxDecoration(
-              gradient: AppColors.activeNavGradient,
-              borderRadius: BorderRadius.circular(screenWidth >= 768 ? 25 : 22),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.favorite,
-                  color: AppColors.white,
-                  size: screenWidth >= 768 ? 18 : 16,
+        Row(
+          children: [
+            SizedBox(width: AppPaddings.s),
+            // Limited Offer Button
+            GestureDetector(
+              onTap: _showLimitedOfferBottomSheet,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth >= 768 ? 20 : 16,
+                  vertical: screenWidth >= 768 ? 12 : 10,
                 ),
-                SizedBox(width: AppPaddings.xs),
-                Text(
-                  AppStrings.limitedOfferBtn,
-                  style: _getResponsiveLimitedOfferStyle(screenWidth),
+                decoration: BoxDecoration(
+                  gradient: AppColors.activeNavGradient,
+                  borderRadius: BorderRadius.circular(
+                    screenWidth >= 768 ? 25 : 22,
+                  ),
                 ),
-              ],
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.favorite,
+                      color: AppColors.white,
+                      size: screenWidth >= 768 ? 18 : 16,
+                    ),
+                    SizedBox(width: AppPaddings.xs),
+                    Text(
+                      AppStrings.limitedOfferBtn,
+                      style: _getResponsiveLimitedOfferStyle(screenWidth),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
   }
 
   Widget _buildProfileInfo(double screenWidth) {
-    return Row(
-      children: [
-        // Profile Image
-        Container(
-          width: screenWidth >= 768 ? 80 : 60,
-          height: screenWidth >= 768 ? 80 : 60,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(screenWidth >= 768 ? 20 : 16),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFFF6B35), Color(0xFFFF8E35)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        final user = authProvider.user;
+        final isLoading = authProvider.isLoading;
+
+        return Row(
+          children: [
+            // Profile Image
+            Container(
+              width: screenWidth >= 768 ? 80 : 60,
+              height: screenWidth >= 768 ? 80 : 60,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(
+                  screenWidth >= 768 ? 20 : 16,
+                ),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF6B35), Color(0xFFFF8E35)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(
+                  screenWidth >= 768 ? 20 : 16,
+                ),
+                child: user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                    ? Image.network(
+                        user.photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildDefaultProfileIcon(screenWidth);
+                        },
+                      )
+                    : _buildDefaultProfileIcon(screenWidth),
+              ),
             ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(screenWidth >= 768 ? 20 : 16),
-            child: Image.asset(
-              'assets/images/profile_photo.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: AppColors.gray30,
-                  child: Icon(
-                    Icons.person,
-                    color: AppColors.gray60,
-                    size: screenWidth >= 768 ? 40 : 30,
+
+            SizedBox(width: AppPaddings.l),
+
+            // Profile Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isLoading)
+                    Container(
+                      width: 120,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: AppColors.gray30,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    )
+                  else
+                    Text(
+                      user?.name ?? 'Kullanıcı',
+                      style: _getResponsiveNameStyle(screenWidth),
+                    ),
+
+                  SizedBox(height: AppPaddings.xs),
+
+                  if (isLoading)
+                    Container(
+                      width: 80,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: AppColors.gray30,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    )
+                  else
+                    Text(
+                      'ID: ${user?.id.substring(0, 8) ?? 'Unknown'}',
+                      style: _getResponsiveIdStyle(screenWidth),
+                    ),
+                ],
+              ),
+            ),
+
+            // Add Photo Button
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Fotoğraf yükleme özelliği yakında eklenecek',
+                    ),
+                    backgroundColor: AppColors.primary,
                   ),
                 );
               },
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth >= 768 ? 20 : 16,
+                  vertical: screenWidth >= 768 ? 12 : 10,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.gray20,
+                  borderRadius: BorderRadius.circular(
+                    screenWidth >= 768 ? 14 : 12,
+                  ),
+                ),
+                child: Text(
+                  AppStrings.addPhotoBtn,
+                  style: _getResponsiveAddPhotoStyle(screenWidth),
+                ),
+              ),
             ),
-          ),
-        ),
+          ],
+        );
+      },
+    );
+  }
 
-        SizedBox(width: AppPaddings.l),
-
-        // Profile Details
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppStrings.userName,
-                style: _getResponsiveNameStyle(screenWidth),
-              ),
-              SizedBox(height: AppPaddings.xs),
-              Text(
-                AppStrings.userIdLabel,
-                style: _getResponsiveIdStyle(screenWidth),
-              ),
-            ],
-          ),
-        ),
-
-        // Add Photo Button
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: screenWidth >= 768 ? 20 : 16,
-            vertical: screenWidth >= 768 ? 12 : 10,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.gray20,
-            borderRadius: BorderRadius.circular(screenWidth >= 768 ? 14 : 12),
-          ),
-          child: Text(
-            AppStrings.addPhotoBtn,
-            style: _getResponsiveAddPhotoStyle(screenWidth),
-          ),
-        ),
-      ],
+  Widget _buildDefaultProfileIcon(double screenWidth) {
+    return Container(
+      color: AppColors.gray30,
+      child: Icon(
+        Icons.person,
+        color: AppColors.gray60,
+        size: screenWidth >= 768 ? 40 : 30,
+      ),
     );
   }
 
