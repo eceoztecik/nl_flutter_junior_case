@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:jr_case_boilerplate/core/constants/app_colors.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
 import 'package:jr_case_boilerplate/core/constants/app_text_styles.dart';
@@ -10,6 +11,7 @@ import 'package:jr_case_boilerplate/core/mixins/validators_mixin.dart';
 import 'package:jr_case_boilerplate/core/widgets/text_form_field/custom_text_form_field.dart';
 import 'package:jr_case_boilerplate/features/auth/enums/social_login_type.dart';
 import 'package:jr_case_boilerplate/features/auth/extensions/social_login_type_ext.dart';
+import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
 import 'package:lottie/lottie.dart';
 
 class LoginView extends StatefulWidget {
@@ -23,7 +25,6 @@ class _LoginViewState extends State<LoginView> with ValidatorsMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoginLoading = false;
 
   @override
   void dispose() {
@@ -32,33 +33,34 @@ class _LoginViewState extends State<LoginView> with ValidatorsMixin {
     super.dispose();
   }
 
-  // Login function
+  // Login function with AuthProvider
   void _handleLogin() async {
     if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoginLoading = true;
-      });
+      final authProvider = context.read<AuthProvider>();
 
-      try {
-        await Future.delayed(const Duration(seconds: 2));
+      // Clear any previous errors
+      authProvider.clearError();
 
-        if (mounted) {
-          Navigator.pushNamed(context, '/home');
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Giriş başarısız: ${e.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoginLoading = false;
-          });
+      final success = await authProvider.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        if (success) {
+          // Login successful - navigate to home
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          // Show error message
+          if (authProvider.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(authProvider.errorMessage!),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
     }
@@ -91,7 +93,8 @@ class _LoginViewState extends State<LoginView> with ValidatorsMixin {
                     child: _buildForgotPassword(),
                   ),
                   const SizedBox(height: 12),
-                  // Login Button
+
+                  // Login Button with Consumer
                   _buildLoginButton(),
 
                   const SizedBox(height: 32),
@@ -202,10 +205,14 @@ class _LoginViewState extends State<LoginView> with ValidatorsMixin {
   }
 
   Widget _buildLoginButton() {
-    return CustomPrimaryButton(
-      text: AppStrings.login,
-      isLoading: _isLoginLoading,
-      onPressed: _handleLogin,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return CustomPrimaryButton(
+          text: AppStrings.login,
+          isLoading: authProvider.isLoading,
+          onPressed: authProvider.isLoading ? null : _handleLogin,
+        );
+      },
     );
   }
 
@@ -228,43 +235,61 @@ class _LoginViewState extends State<LoginView> with ValidatorsMixin {
 
   // _buildSocialButton
   Widget _buildSocialButton(SocialLoginType type) {
-    return Container(
-      width: 60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: type.backgroundColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gray20),
-      ),
-      child: IconButton(
-        onPressed: () => type.authenticate(),
-        icon: Icon(type.icon, color: type.iconColor, size: 28),
-      ),
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: type.backgroundColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.gray20),
+          ),
+          child: IconButton(
+            onPressed: authProvider.isLoading
+                ? null
+                : () => type.authenticate(),
+            icon: Icon(
+              type.icon,
+              color: authProvider.isLoading ? AppColors.gray50 : type.iconColor,
+              size: 28,
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildRegisterLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          AppStrings.alreadyHaveAccount,
-          style: AppTextStyles.bodyMediumRegular.copyWith(
-            color: AppColors.gray60,
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pushNamed(context, AppRoutes.register);
-          },
-          child: Text(
-            AppStrings.register2,
-            style: AppTextStyles.bodyMediumBold.copyWith(
-              color: AppColors.white,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppStrings.alreadyHaveAccount,
+              style: AppTextStyles.bodyMediumRegular.copyWith(
+                color: AppColors.gray60,
+              ),
             ),
-          ),
-        ),
-      ],
+            TextButton(
+              onPressed: authProvider.isLoading
+                  ? null
+                  : () {
+                      Navigator.pushNamed(context, AppRoutes.register);
+                    },
+              child: Text(
+                AppStrings.register2,
+                style: AppTextStyles.bodyMediumBold.copyWith(
+                  color: authProvider.isLoading
+                      ? AppColors.gray50
+                      : AppColors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
