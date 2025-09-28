@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:jr_case_boilerplate/core/constants/app_colors.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
 import 'package:jr_case_boilerplate/core/constants/app_text_styles.dart';
@@ -9,6 +10,7 @@ import 'package:jr_case_boilerplate/core/mixins/validators_mixin.dart';
 import 'package:jr_case_boilerplate/core/widgets/text_form_field/custom_text_form_field.dart';
 import 'package:jr_case_boilerplate/features/auth/enums/social_login_type.dart';
 import 'package:jr_case_boilerplate/features/auth/extensions/social_login_type_ext.dart';
+import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
 import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
 
 class RegisterView extends StatefulWidget {
@@ -26,8 +28,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  // State management for loading and terms acceptance
-  bool _isRegisterLoading = false;
+  // State management for terms acceptance
   bool _isTermsAccepted = false;
 
   @override
@@ -42,31 +43,35 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
   void _handleRegister() async {
     // Validate form and check if terms are accepted before proceeding
     if (_formKey.currentState!.validate() && _isTermsAccepted) {
-      setState(() {
-        _isRegisterLoading = true;
-      });
+      final authProvider = context.read<AuthProvider>();
 
-      try {
-        await Future.delayed(const Duration(seconds: 2));
+      // Clear any previous errors
+      authProvider.clearError();
 
-        if (mounted) {
+      final success = await authProvider.register(
+        _emailController.text.trim(),
+        _nameController.text.trim(),
+        _passwordController.text,
+      );
+      print('Registration success: $success'); // DEBUG
+      print('Auth status: ${authProvider.status}'); // DEBUG
+      print('User: ${authProvider.user?.name}'); // DEBUG
+
+      if (mounted) {
+        if (success) {
+          // Registration successful - navigate to profile photo upload
           Navigator.pushNamed(context, '/profile-photo-upload');
-        }
-      } catch (e) {
-        // Handle registration errors
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Kayıt başarısız: ${e.toString()}'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isRegisterLoading = false;
-          });
+        } else {
+          // Show error message
+          if (authProvider.errorMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(authProvider.errorMessage!),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
         }
       }
     } else if (!_isTermsAccepted) {
@@ -75,6 +80,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
         SnackBar(
           content: Text('Kullanıcı sözleşmesini kabul etmelisiniz'),
           backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
         ),
       );
     }
@@ -253,57 +259,75 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
   Widget _buildTermsCheckbox(double screenWidth) {
     final fontSize = screenWidth >= 768 ? 14.0 : 13.0;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Transform.scale(
-          scale: screenWidth >= 768 ? 1.1 : 1.0,
-          child: Checkbox(
-            value: _isTermsAccepted,
-            onChanged: (value) {
-              setState(() {
-                _isTermsAccepted = value ?? false;
-              });
-            },
-            activeColor: AppColors.primary,
-            checkColor: AppColors.white,
-            side: BorderSide(color: AppColors.gray40),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(top: AppPaddings.xs),
-            child: RichText(
-              text: TextSpan(
-                style: AppTextStyles.bodySmallRegular.copyWith(
-                  color: AppColors.gray60,
-                  fontSize: fontSize,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Transform.scale(
+              scale: screenWidth >= 768 ? 1.1 : 1.0,
+              child: Checkbox(
+                value: _isTermsAccepted,
+                onChanged: authProvider.isLoading
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _isTermsAccepted = value ?? false;
+                        });
+                      },
+                activeColor: AppColors.primary,
+                checkColor: AppColors.white,
+                side: BorderSide(
+                  color: authProvider.isLoading
+                      ? AppColors.gray30
+                      : AppColors.gray40,
                 ),
-                children: [
-                  TextSpan(text: AppStrings.termsLine1),
-                  TextSpan(
-                    text: ' ${AppStrings.termsLine2}',
-                    style: TextStyle(
-                      color: AppColors.white,
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  TextSpan(text: ' ${AppStrings.termsLine3}'),
-                ],
               ),
             ),
-          ),
-        ),
-      ],
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(top: AppPaddings.xs),
+                child: RichText(
+                  text: TextSpan(
+                    style: AppTextStyles.bodySmallRegular.copyWith(
+                      color: authProvider.isLoading
+                          ? AppColors.gray50
+                          : AppColors.gray60,
+                      fontSize: fontSize,
+                    ),
+                    children: [
+                      TextSpan(text: AppStrings.termsLine1),
+                      TextSpan(
+                        text: ' ${AppStrings.termsLine2}',
+                        style: TextStyle(
+                          color: authProvider.isLoading
+                              ? AppColors.gray40
+                              : AppColors.white,
+                          decoration: TextDecoration.underline,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextSpan(text: ' ${AppStrings.termsLine3}'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildRegisterButton() {
-    return CustomPrimaryButton(
-      text: AppStrings.register,
-      isLoading: _isRegisterLoading,
-      onPressed: _handleRegister,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return CustomPrimaryButton(
+          text: AppStrings.register,
+          isLoading: authProvider.isLoading,
+          onPressed: authProvider.isLoading ? null : _handleRegister,
+        );
+      },
     );
   }
 
@@ -322,27 +346,34 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
         ? 30.0
         : 28.0;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildSocialButton(
-          SocialLoginType.google,
-          socialButtonSize,
-          socialIconSize,
-        ),
-        SizedBox(width: socialButtonSpacing),
-        _buildSocialButton(
-          SocialLoginType.apple,
-          socialButtonSize,
-          socialIconSize,
-        ),
-        SizedBox(width: socialButtonSpacing),
-        _buildSocialButton(
-          SocialLoginType.facebook,
-          socialButtonSize,
-          socialIconSize,
-        ),
-      ],
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildSocialButton(
+              SocialLoginType.google,
+              socialButtonSize,
+              socialIconSize,
+              authProvider.isLoading,
+            ),
+            SizedBox(width: socialButtonSpacing),
+            _buildSocialButton(
+              SocialLoginType.apple,
+              socialButtonSize,
+              socialIconSize,
+              authProvider.isLoading,
+            ),
+            SizedBox(width: socialButtonSpacing),
+            _buildSocialButton(
+              SocialLoginType.facebook,
+              socialButtonSize,
+              socialIconSize,
+              authProvider.isLoading,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -350,6 +381,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
     SocialLoginType type,
     double size,
     double iconSize,
+    bool isDisabled,
   ) {
     return Container(
       width: size,
@@ -357,37 +389,51 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
       decoration: BoxDecoration(
         color: type.backgroundColor,
         borderRadius: BorderRadius.circular(AppPaddings.m),
-        border: Border.all(color: AppColors.gray20),
+        border: Border.all(
+          color: isDisabled ? AppColors.gray30 : AppColors.gray20,
+        ),
       ),
       child: IconButton(
-        onPressed: () => type.authenticate(),
-        icon: Icon(type.icon, color: type.iconColor, size: iconSize),
+        onPressed: isDisabled ? null : () => type.authenticate(),
+        icon: Icon(
+          type.icon,
+          color: isDisabled ? AppColors.gray50 : type.iconColor,
+          size: iconSize,
+        ),
       ),
     );
   }
 
   Widget _buildLoginLink() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          AppStrings.hasAccountQuestion,
-          style: AppTextStyles.bodyMediumRegular.copyWith(
-            color: AppColors.gray60,
-          ),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: Text(
-            AppStrings.login,
-            style: AppTextStyles.bodyMediumBold.copyWith(
-              color: AppColors.white,
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppStrings.hasAccountQuestion,
+              style: AppTextStyles.bodyMediumRegular.copyWith(
+                color: AppColors.gray60,
+              ),
             ),
-          ),
-        ),
-      ],
+            TextButton(
+              onPressed: authProvider.isLoading
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                    },
+              child: Text(
+                AppStrings.login,
+                style: AppTextStyles.bodyMediumBold.copyWith(
+                  color: authProvider.isLoading
+                      ? AppColors.gray50
+                      : AppColors.white,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
