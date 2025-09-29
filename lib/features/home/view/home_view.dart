@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:jr_case_boilerplate/core/constants/app_paddings.dart';
-import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/enums/nav_bar_views.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/extensions/nav_bar_views_ext.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/view/nav_bar_view.dart';
+import 'package:jr_case_boilerplate/features/home/providers/movie_providers.dart';
+import 'package:provider/provider.dart';
+import 'package:jr_case_boilerplate/features/home/widgets/home_movie_list_item.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -14,13 +12,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  bool isLiked = true;
-
-  void _toggleLike() {
-    setState(() {
-      isLiked = !isLiked;
-    });
-  }
+  final PageController _pageController = PageController();
+  int _currentIndex = 0;
 
   @override
   void initState() {
@@ -32,191 +25,186 @@ class _HomePageState extends State<HomePage> {
         statusBarIconBrightness: Brightness.light,
       ),
     );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MovieProvider>().loadMovies();
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int index) {
+    if (mounted) {
+      setState(() {
+        _currentIndex = index;
+      });
+
+      final movieProvider = context.read<MovieProvider>();
+
+      if (index >= movieProvider.movies.length - 2 &&
+          movieProvider.hasMorePages &&
+          !movieProvider.isLoadingMore) {
+        movieProvider.loadMoreMovies();
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // Background Image
-          Positioned.fill(
-            child: Image.asset('assets/images/Image.png', fit: BoxFit.cover),
-          ),
+      body: Consumer<MovieProvider>(
+        builder: (context, movieProvider, child) {
+          return _buildBody(movieProvider);
+        },
+      ),
+    );
+  }
 
-          // Dark overlay gradient
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.1),
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
-                  ],
+  Widget _buildBody(MovieProvider movieProvider) {
+    if (movieProvider.isLoading && !movieProvider.hasMovies) {
+      return _buildLoadingState();
+    }
+
+    if (movieProvider.hasError && !movieProvider.hasMovies) {
+      return _buildErrorState(movieProvider);
+    }
+
+    if (!movieProvider.hasMovies) {
+      return _buildEmptyState();
+    }
+
+    return PageView.builder(
+      controller: _pageController,
+      scrollDirection: Axis.vertical,
+      itemCount: movieProvider.movies.length,
+      physics: const BouncingScrollPhysics(),
+      onPageChanged: _onPageChanged,
+      itemBuilder: (context, index) {
+        final movie = movieProvider.movies[index];
+        return HomeMovieListItem(
+          posterUrl: movie.posterUrl,
+          title: movie.title,
+          description: movie.description,
+          isFavorite: movie.isFavorite,
+          onFavoriteToggle: () => movieProvider.toggleMovieFavorite(movie.id),
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1a1a1a), Color(0xFF000000)],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(color: Colors.red, strokeWidth: 3),
+            SizedBox(height: 16),
+            Text(
+              'Filmler yükleniyor...',
+              style: TextStyle(color: Colors.white, fontSize: 16),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(MovieProvider movieProvider) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1a1a1a), Color(0xFF000000)],
+        ),
+      ),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 64),
+              const SizedBox(height: 16),
+              const Text(
+                'Filmler yüklenirken hata oluştu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                movieProvider.errorMessage ?? 'Bilinmeyen hata',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+                textAlign: TextAlign.center,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  movieProvider.clearError();
+                  movieProvider.loadMovies();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Text('Tekrar Dene'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1a1a1a), Color(0xFF000000)],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.movie_outlined, color: Colors.white54, size: 64),
+            SizedBox(height: 16),
+            Text(
+              'Henüz film bulunamadı',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-
-          // Main content - Bottom positioned
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
-                    Colors.black.withOpacity(0.95),
-                  ],
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Heart button
-                  Padding(
-                    padding: EdgeInsets.only(
-                      right: AppPaddingsResponsive.getScreenPadding(
-                        screenWidth,
-                      ).right,
-                      bottom: AppPaddings.m,
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: GestureDetector(
-                        onTap: _toggleLike,
-                        child: Container(
-                          width: 52,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(26),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
-                              width: 1,
-                            ),
-                          ),
-                          child: Icon(
-                            isLiked ? Icons.favorite : Icons.favorite_border,
-                            color: isLiked ? Colors.red : Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  // Profile info section
-                  Padding(
-                    padding: AppPaddingsResponsive.getScreenPadding(
-                      screenWidth,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Logo and title
-                        Row(
-                          children: [
-                            Container(
-                              width: screenWidth >= 768 ? 32 : 28,
-                              height: screenWidth >= 768 ? 32 : 28,
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'N',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: screenWidth >= 768 ? 20 : 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: AppPaddings.m),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Son Ana Kadar',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: screenWidth >= 1200
-                                          ? 32
-                                          : screenWidth >= 768
-                                          ? 28
-                                          : 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppPaddings.xs),
-                                  Text(
-                                    'Birbirine derinden bağlı iki çocukluk arkadaşı olan Sydney ve Karl',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: screenWidth >= 1200
-                                          ? 18
-                                          : screenWidth >= 768
-                                          ? 16
-                                          : 14,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppPaddings.xs),
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: 'DevamınıOku',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: screenWidth >= 1200
-                                                ? 18
-                                                : screenWidth >= 768
-                                                ? 16
-                                                : 14,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        SizedBox(
-                          height: AppPaddingsResponsive.getSectionSpacing(
-                            screenWidth,
-                          ),
-                        ),
-
-                        // Bottom safe area + NavBar space
-                        SizedBox(height: 80),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+            SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
