@@ -72,13 +72,19 @@ class FavoriteMoviesResponse {
   FavoriteMoviesResponse({required this.movies});
 
   factory FavoriteMoviesResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['data'] ?? json;
+    final data = json['data'];
 
-    final movies =
-        (data['movies'] as List<dynamic>?)
-            ?.map((movieJson) => Movie.fromJson(movieJson))
-            .toList() ??
-        [];
+    List<Movie> movies = [];
+
+    if (data is List) {
+      movies = data
+          .map((movieJson) => Movie.fromJson(movieJson as Map<String, dynamic>))
+          .toList();
+    } else if (data is Map && data['movies'] is List) {
+      movies = (data['movies'] as List)
+          .map((movieJson) => Movie.fromJson(movieJson as Map<String, dynamic>))
+          .toList();
+    }
 
     for (var movie in movies) {
       movie.isFavorite = true;

@@ -12,16 +12,14 @@ class MovieService {
   // GET /movie/list - Paginated movie list
   Future<MovieListResponse> getMovies({int page = 1}) async {
     try {
-      print('🎬 API Request: movie/list?page=$page'); // DEBUG
+      print('🎬 API Request: movie/list?page=$page');
 
       final response = await _apiService.get('movie/list?page=$page');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-
         final movieResponse = MovieListResponse.fromJson(jsonData);
-        print('🎬 Movies count: ${movieResponse.movies.length}'); // DEBUG
-
+        print('🎬 Movies count: ${movieResponse.movies.length}');
         return movieResponse;
       } else if (response.statusCode == 401) {
         throw MovieServiceException('Unauthorized - Please login');
@@ -31,7 +29,7 @@ class MovieService {
         );
       }
     } catch (e) {
-      print('🎬 Error: $e'); // DEBUG
+      print('🎬 Error: $e');
       if (e is MovieServiceException) rethrow;
       throw MovieServiceException('Network error: $e');
     }
@@ -44,7 +42,9 @@ class MovieService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        return FavoriteMoviesResponse.fromJson(jsonData);
+
+        final favoritesResponse = FavoriteMoviesResponse.fromJson(jsonData);
+        return favoritesResponse;
       } else if (response.statusCode == 401) {
         throw MovieServiceException('Unauthorized - Please login');
       } else {
@@ -53,6 +53,7 @@ class MovieService {
         );
       }
     } catch (e) {
+      print(' Error Stack: ${StackTrace.current}');
       if (e is MovieServiceException) rethrow;
       throw MovieServiceException('Network error: $e');
     }
@@ -68,7 +69,8 @@ class MovieService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        return FavoriteResponse.fromJson(jsonData);
+        final favoriteResponse = FavoriteResponse.fromJson(jsonData);
+        return favoriteResponse;
       } else if (response.statusCode == 401) {
         throw MovieServiceException('Unauthorized - Please login');
       } else if (response.statusCode == 404) {
@@ -79,6 +81,7 @@ class MovieService {
         );
       }
     } catch (e) {
+      print(' Error: $e');
       if (e is MovieServiceException) rethrow;
       throw MovieServiceException('Network error: $e');
     }

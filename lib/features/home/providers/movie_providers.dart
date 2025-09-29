@@ -17,6 +17,11 @@ class MovieProvider extends ChangeNotifier {
   int _currentPage = 1;
   bool _hasMorePages = true;
 
+  // Favorites State
+  List<Movie> _favoriteMovies = [];
+  bool _isLoadingFavorites = false;
+  String? _favoritesErrorMessage;
+
   // Getters
   MovieState get state => _state;
   List<Movie> get movies => _movies;
@@ -28,12 +33,18 @@ class MovieProvider extends ChangeNotifier {
   bool get hasError => _state == MovieState.error;
   bool get hasMovies => _movies.isNotEmpty;
 
+  // Favorites Getters
+  List<Movie> get favoriteMovies => _favoriteMovies;
+  bool get isLoadingFavorites => _isLoadingFavorites;
+  String? get favoritesErrorMessage => _favoritesErrorMessage;
+  bool get hasFavorites => _favoriteMovies.isNotEmpty;
+
   // Auth token
   void setAuthToken(String token) {
     _repository.setAuthToken(token);
   }
 
-  // First movie
+  // First movie load
   Future<void> loadMovies() async {
     if (_state == MovieState.loading) return;
 
@@ -53,6 +64,7 @@ class MovieProvider extends ChangeNotifier {
     }
   }
 
+  // Load more movies (pagination)
   Future<void> loadMoreMovies() async {
     if (!_hasMorePages || _state == MovieState.loadingMore) return;
 
@@ -79,30 +91,56 @@ class MovieProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> toggleMovieFavorite(String movieId) async {
-    final movieIndex = _movies.indexWhere((movie) => movie.id == movieId);
-    if (movieIndex == -1) return;
+  // Load favorite movies for profile page
+  Future<void> loadFavoriteMovies() async {
+    if (_isLoadingFavorites) return;
 
-    // Optimistic update - UI
-    final originalValue = _movies[movieIndex].isFavorite;
-    _movies[movieIndex].isFavorite = !originalValue;
+    _isLoadingFavorites = true;
+    _favoritesErrorMessage = null;
     notifyListeners();
 
     try {
-      final success = await _repository.toggleFavorite(movieId);
-
-      if (!success) {
-        _movies[movieIndex].isFavorite = originalValue;
-        notifyListeners();
-      }
-    } catch (e) {
-      _movies[movieIndex].isFavorite = originalValue;
+      final favorites = await _repository.getFavoriteMovies();
+      _favoriteMovies = favorites;
+      _isLoadingFavorites = false;
       notifyListeners();
-
-      _errorMessage = 'Favori durumu değiştirilemedi: $e';
+    } catch (e) {
+      _favoritesErrorMessage = e.toString();
+      _isLoadingFavorites = false;
+      notifyListeners();
     }
   }
 
+  // Toggle favorite status
+  Future<void> toggleMovieFavorite(String movieId) async {
+    // Update in main movies list
+    final movieIndex = _movies.indexWhere((movie) => movie.id == movieId);
+    if (movieIndex != -1) {
+      final originalValue = _movies[movieIndex].isFavorite;
+      _movies[movieIndex].isFavorite = !originalValue;
+      notifyListeners();
+
+      try {
+        final success = await _repository.toggleFavorite(movieId);
+
+        if (!success) {
+          _movies[movieIndex].isFavorite = originalValue;
+          notifyListeners();
+        } else {
+          // Refresh favorites list if exists
+          if (_favoriteMovies.isNotEmpty) {
+            await loadFavoriteMovies();
+          }
+        }
+      } catch (e) {
+        _movies[movieIndex].isFavorite = originalValue;
+        notifyListeners();
+        _errorMessage = 'Favori durumu değiştirilemedi: $e';
+      }
+    }
+  }
+
+  // Refresh movies
   Future<void> refresh() async {
     _movies.clear();
     _currentPage = 1;
@@ -110,6 +148,7 @@ class MovieProvider extends ChangeNotifier {
     await loadMovies();
   }
 
+  // Get movie by ID
   Movie? getMovieById(String id) {
     try {
       return _movies.firstWhere((movie) => movie.id == id);
@@ -118,8 +157,8 @@ class MovieProvider extends ChangeNotifier {
     }
   }
 
-  // Favorite movies
-  List<Movie> get favoriteMovies {
+  // Get favorite movies from current list (not from API)
+  List<Movie> get localFavoriteMovies {
     return _movies.where((movie) => movie.isFavorite).toList();
   }
 
@@ -133,5 +172,10 @@ class MovieProvider extends ChangeNotifier {
     if (_state == MovieState.error) {
       _setState(_movies.isEmpty ? MovieState.initial : MovieState.loaded);
     }
+  }
+
+  void clearFavoritesError() {
+    _favoritesErrorMessage = null;
+    notifyListeners();
   }
 }
