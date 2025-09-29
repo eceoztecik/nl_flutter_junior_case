@@ -8,8 +8,8 @@ import 'package:jr_case_boilerplate/core/constants/app_paddings.dart';
 import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
 import 'package:jr_case_boilerplate/core/widgets/bottom_sheet/offer_bottom_sheet.dart';
 import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/enums/nav_bar_views.dart';
-import 'package:jr_case_boilerplate/features/nav_bar/view/nav_bar_view.dart';
+import 'package:jr_case_boilerplate/features/home/providers/movie_providers.dart';
+import 'package:jr_case_boilerplate/features/profile/widgets/profile_movie_card.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -32,6 +32,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshProfile();
+      _loadFavorites();
     });
   }
 
@@ -40,6 +41,10 @@ class _ProfilePageState extends State<ProfilePage> {
     if (authProvider.isAuthenticated) {
       authProvider.getProfile();
     }
+  }
+
+  void _loadFavorites() {
+    context.read<MovieProvider>().loadFavoriteMovies();
   }
 
   void _showLimitedOfferBottomSheet() {
@@ -51,15 +56,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _logout() async {
-    final authProvider = context.read<AuthProvider>();
-    await authProvider.logout();
-
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -67,53 +63,26 @@ class _ProfilePageState extends State<ProfilePage> {
     return Scaffold(
       backgroundColor: Colors.black,
       body: AppColors.combinedBg(
-        child: Stack(
-          children: [
-            // Content
-            SafeArea(
-              child: SingleChildScrollView(
-                padding: AppPaddingsResponsive.getScreenPadding(screenWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: AppPaddings.m),
-                    // Header
-                    _buildHeader(screenWidth),
-                    SizedBox(
-                      height: AppPaddingsResponsive.getSectionSpacing(
-                        screenWidth,
-                      ),
-                    ),
-                    // Profile Info Section
-                    _buildProfileInfo(screenWidth),
-                    SizedBox(
-                      height: AppPaddingsResponsive.getSectionSpacing(
-                        screenWidth,
-                      ),
-                    ),
-                    // Favorites Section
-                    _buildFavoritesSection(screenWidth),
-                    SizedBox(height: 120), // Space for navbar
-                  ],
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: AppPaddingsResponsive.getScreenPadding(screenWidth),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: AppPaddings.m),
+                _buildHeader(screenWidth),
+                SizedBox(
+                  height: AppPaddingsResponsive.getSectionSpacing(screenWidth),
                 ),
-              ),
+                _buildProfileInfo(screenWidth),
+                SizedBox(
+                  height: AppPaddingsResponsive.getSectionSpacing(screenWidth),
+                ),
+                _buildFavoritesSection(screenWidth),
+                SizedBox(height: 120),
+              ],
             ),
-
-            // Bottom Navigation Bar
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: NavBarView(
-                selectedView: NavBarViews.profile,
-                onItemTapped: (NavBarViews view) {
-                  if (view == NavBarViews.home) {
-                    Navigator.pushReplacementNamed(context, '/home');
-                  }
-                },
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -127,41 +96,33 @@ class _ProfilePageState extends State<ProfilePage> {
           AppStrings.profileTitle,
           style: _getResponsiveHeaderStyle(screenWidth),
         ),
-        Row(
-          children: [
-            SizedBox(width: AppPaddings.s),
-            // Limited Offer Button
-            GestureDetector(
-              onTap: _showLimitedOfferBottomSheet,
-              child: Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: screenWidth >= 768 ? 20 : 16,
-                  vertical: screenWidth >= 768 ? 12 : 10,
-                ),
-                decoration: BoxDecoration(
-                  gradient: AppColors.activeNavGradient,
-                  borderRadius: BorderRadius.circular(
-                    screenWidth >= 768 ? 25 : 22,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.favorite,
-                      color: AppColors.white,
-                      size: screenWidth >= 768 ? 18 : 16,
-                    ),
-                    SizedBox(width: AppPaddings.xs),
-                    Text(
-                      AppStrings.limitedOfferBtn,
-                      style: _getResponsiveLimitedOfferStyle(screenWidth),
-                    ),
-                  ],
-                ),
-              ),
+        GestureDetector(
+          onTap: _showLimitedOfferBottomSheet,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: screenWidth >= 768 ? 20 : 16,
+              vertical: screenWidth >= 768 ? 12 : 10,
             ),
-          ],
+            decoration: BoxDecoration(
+              gradient: AppColors.activeNavGradient,
+              borderRadius: BorderRadius.circular(screenWidth >= 768 ? 25 : 22),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.favorite,
+                  color: AppColors.white,
+                  size: screenWidth >= 768 ? 18 : 16,
+                ),
+                SizedBox(width: AppPaddings.xs),
+                Text(
+                  AppStrings.limitedOfferBtn,
+                  style: _getResponsiveLimitedOfferStyle(screenWidth),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -175,7 +136,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
         return Row(
           children: [
-            // Profile Image
             Container(
               width: screenWidth >= 768 ? 80 : 60,
               height: screenWidth >= 768 ? 80 : 60,
@@ -204,10 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     : _buildDefaultProfileIcon(screenWidth),
               ),
             ),
-
             SizedBox(width: AppPaddings.l),
-
-            // Profile Details
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -226,9 +183,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       user?.name ?? 'Kullanıcı',
                       style: _getResponsiveNameStyle(screenWidth),
                     ),
-
                   SizedBox(height: AppPaddings.xs),
-
                   if (isLoading)
                     Container(
                       width: 80,
@@ -246,8 +201,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ],
               ),
             ),
-
-            // Add Photo Button
             GestureDetector(
               onTap: () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -294,6 +247,55 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildFavoritesSection(double screenWidth) {
+    return Consumer<MovieProvider>(
+      builder: (context, movieProvider, child) {
+        if (movieProvider.isLoadingFavorites) {
+          return _buildFavoritesLoading(screenWidth);
+        }
+
+        if (movieProvider.favoritesErrorMessage != null) {
+          return _buildFavoritesError(screenWidth, movieProvider);
+        }
+
+        if (!movieProvider.hasFavorites) {
+          return _buildFavoritesEmpty(screenWidth);
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              AppStrings.myFavorites,
+              style: _getResponsiveFavoritesTitleStyle(screenWidth),
+            ),
+            SizedBox(height: AppPaddings.l),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.68,
+                crossAxisSpacing: AppPaddings.m,
+                mainAxisSpacing: AppPaddings.l,
+              ),
+              itemCount: movieProvider.favoriteMovies.length,
+              itemBuilder: (context, index) {
+                final movie = movieProvider.favoriteMovies[index];
+                return ProfileMovieCard(
+                  title: movie.title,
+                  description: movie.description ?? '',
+                  posterUrl: movie.posterUrl,
+                  onTap: () {},
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildFavoritesLoading(double screenWidth) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -301,111 +303,77 @@ class _ProfilePageState extends State<ProfilePage> {
           AppStrings.myFavorites,
           style: _getResponsiveFavoritesTitleStyle(screenWidth),
         ),
-
         SizedBox(height: AppPaddings.l),
-
-        // Movies Grid
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          childAspectRatio: 0.68,
-          crossAxisSpacing: AppPaddings.m,
-          mainAxisSpacing: AppPaddings.l,
-          children: [
-            _buildMovieCard(
-              title: AppStrings.loveAgain,
-              studio: AppStrings.sony,
-              imagePath: 'assets/images/love_again.png',
-              screenWidth: screenWidth,
-            ),
-            _buildMovieCard(
-              title: AppStrings.pastLives,
-              studio: AppStrings.a24,
-              imagePath: 'assets/images/past_lives.png',
-              screenWidth: screenWidth,
-            ),
-            _buildMovieCard(
-              title: AppStrings.anyoneButYou,
-              studio: AppStrings.columbia,
-              imagePath: 'assets/images/anyone_but_you.png',
-              screenWidth: screenWidth,
-            ),
-            _buildMovieCard(
-              title: AppStrings.culpaMia,
-              studio: AppStrings.netflix,
-              imagePath: 'assets/images/culpa_mia.png',
-              screenWidth: screenWidth,
-            ),
-          ],
+        Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+            strokeWidth: 3,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildMovieCard({
-    required String title,
-    required String studio,
-    required String imagePath,
-    required double screenWidth,
-  }) {
+  Widget _buildFavoritesError(double screenWidth, MovieProvider provider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Movie Poster
-        Expanded(
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(screenWidth >= 768 ? 16 : 12),
-              color: AppColors.gray20,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(screenWidth >= 768 ? 16 : 12),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.gray30,
-                    child: Center(
-                      child: Icon(
-                        Icons.movie,
-                        color: AppColors.gray60,
-                        size: screenWidth >= 768 ? 40 : 30,
-                      ),
-                    ),
-                  );
-                },
+        Text(
+          AppStrings.myFavorites,
+          style: _getResponsiveFavoritesTitleStyle(screenWidth),
+        ),
+        SizedBox(height: AppPaddings.l),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, color: AppColors.primary, size: 48),
+              SizedBox(height: AppPaddings.m),
+              Text(
+                'Favoriler yüklenemedi',
+                style: AppTextStyles.bodyMediumBold,
               ),
-            ),
+              SizedBox(height: AppPaddings.s),
+              ElevatedButton(
+                onPressed: _loadFavorites,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
+                child: Text('Tekrar Dene'),
+              ),
+            ],
           ),
-        ),
-
-        SizedBox(height: AppPaddings.s),
-
-        // Movie Title
-        Text(
-          title,
-          style: _getResponsiveMovieTitleStyle(screenWidth),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-
-        SizedBox(height: AppPaddings.xs),
-
-        // Studio
-        Text(
-          studio,
-          style: _getResponsiveStudioStyle(screenWidth),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
   }
 
-  // Responsive Text Styles
+  Widget _buildFavoritesEmpty(double screenWidth) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppStrings.myFavorites,
+          style: _getResponsiveFavoritesTitleStyle(screenWidth),
+        ),
+        SizedBox(height: AppPaddings.l),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.favorite_border, color: AppColors.gray60, size: 64),
+              SizedBox(height: AppPaddings.m),
+              Text(
+                'Henüz favori film eklemediniz',
+                style: AppTextStyles.bodyMediumRegular.copyWith(
+                  color: AppColors.gray60,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   TextStyle _getResponsiveHeaderStyle(double screenWidth) {
     if (screenWidth >= 1200) {
       return AppTextStyles.heading3;
@@ -457,22 +425,6 @@ class _ProfilePageState extends State<ProfilePage> {
       return AppTextStyles.heading5;
     } else {
       return AppTextStyles.heading6;
-    }
-  }
-
-  TextStyle _getResponsiveMovieTitleStyle(double screenWidth) {
-    if (screenWidth >= 768) {
-      return AppTextStyles.bodyLargeBold;
-    } else {
-      return AppTextStyles.bodyMediumBold;
-    }
-  }
-
-  TextStyle _getResponsiveStudioStyle(double screenWidth) {
-    if (screenWidth >= 768) {
-      return AppTextStyles.bodyMediumRegular.copyWith(color: AppColors.gray60);
-    } else {
-      return AppTextStyles.bodySmallRegular.copyWith(color: AppColors.gray60);
     }
   }
 }
