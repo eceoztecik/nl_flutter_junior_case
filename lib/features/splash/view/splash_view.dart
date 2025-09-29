@@ -89,37 +89,6 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
 
                   SizedBox(height: isTablet ? 40 : 30),
-
-                  // Loading Indicator
-                  Consumer<AuthProvider>(
-                    builder: (context, authProvider, child) {
-                      return Column(
-                        children: [
-                          SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.primary,
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(height: AppPaddings.m),
-
-                          // Status Text
-                          Text(
-                            _getStatusText(authProvider.status),
-                            style: AppTextStyles.bodySmallRegular.copyWith(
-                              color: AppColors.gray60,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-
                   SizedBox(height: isTablet ? 80 : 60),
                 ],
               ),
@@ -128,20 +97,5 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
       ),
     );
-  }
-
-  String _getStatusText(AuthStatus status) {
-    switch (status) {
-      case AuthStatus.initial:
-        return 'Başlatılıyor...';
-      case AuthStatus.loading:
-        return 'Kontrol ediliyor...';
-      case AuthStatus.authenticated:
-        return 'Hoş geldiniz!';
-      case AuthStatus.unauthenticated:
-        return 'Yönlendiriliyor...';
-      default:
-        return '';
-    }
   }
 }
