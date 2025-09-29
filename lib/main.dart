@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:jr_case_boilerplate/features/home/providers/movie_providers.dart';
 import 'package:provider/provider.dart';
+import 'package:jr_case_boilerplate/features/home/providers/movie_providers.dart';
+import 'package:jr_case_boilerplate/features/splash/view/splash_view.dart';
 import 'package:jr_case_boilerplate/core/routes/app_router.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
 import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
 import 'package:jr_case_boilerplate/features/auth/repositories/auth_repository.dart';
-import 'package:jr_case_boilerplate/tab_container.dart';
-import 'package:jr_case_boilerplate/features/auth/views/login_view.dart';
 import 'package:jr_case_boilerplate/core/services/storage_service.dart';
 
 void main() async {
@@ -38,30 +37,12 @@ class ShartflixApp extends StatelessWidget {
           },
         ),
       ],
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          if (authProvider.status == AuthStatus.initial) {
-            return MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                backgroundColor: Colors.black,
-                body: Center(
-                  child: CircularProgressIndicator(color: Colors.red),
-                ),
-              ),
-            );
-          }
-
-          return MaterialApp(
-            title: AppStrings.appName,
-            debugShowCheckedModeBanner: false,
-            home: authProvider.isAuthenticated
-                ? TabContainer()
-                : const LoginView(),
-            routes: AppRouter.getRoutes(),
-            onGenerateRoute: AppRouter.onGenerateRoute,
-          );
-        },
+      child: MaterialApp(
+        title: AppStrings.appName,
+        debugShowCheckedModeBanner: false,
+        home: const SplashScreen(),
+        routes: AppRouter.getRoutes(),
+        onGenerateRoute: AppRouter.onGenerateRoute,
       ),
     );
   }

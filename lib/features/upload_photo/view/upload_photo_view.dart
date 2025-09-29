@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:jr_case_boilerplate/core/constants/app_colors.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
@@ -8,6 +9,7 @@ import 'package:jr_case_boilerplate/core/constants/app_text_styles.dart';
 import 'package:jr_case_boilerplate/core/constants/app_paddings.dart';
 import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
 import 'package:jr_case_boilerplate/core/widgets/buttons/custom_primary_button.dart';
+import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
 
 class ProfilePhotoUploadPage extends StatefulWidget {
   const ProfilePhotoUploadPage({super.key});
@@ -47,12 +49,14 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Fotoğraf seçilirken hata oluştu: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fotoğraf seçilirken hata oluştu: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -62,12 +66,62 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
     });
   }
 
-  void _handleContinue() {
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  Future<void> _handleContinue() async {
+    if (_selectedImage == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Lütfen bir fotoğraf seçin'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final success = await authProvider.uploadPhoto(_selectedImage!);
+
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profil fotoğrafı başarıyla yüklendi'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+
+        // Argument
+        final args =
+            ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        final fromRegister = args?['fromRegister'] ?? false;
+
+        if (fromRegister) {
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        } else {
+          Navigator.pop(context);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              authProvider.errorMessage ?? 'Fotoğraf yüklenirken hata oluştu',
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _handleSkip() {
-    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final fromRegister = args?['fromRegister'] ?? false;
+
+    if (fromRegister) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    } else {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -79,54 +133,47 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
       backgroundColor: AppColors.black,
       body: AppColors.combinedBg(
         child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(screenWidth),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: AppPaddingsResponsive.getScreenPadding(screenWidth),
-                  child: Column(
-                    children: [
-                      SizedBox(height: screenHeight * 0.08),
-
-                      // Profile Icon
-                      _buildProfileIcon(screenWidth),
-
-                      SizedBox(height: screenHeight * 0.04),
-
-                      // Title
-                      Text(
-                        AppStrings.uploadPhoto,
-                        style: _getResponsiveTitleStyle(screenWidth),
-                        textAlign: TextAlign.center,
+          child: Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return Column(
+                children: [
+                  _buildHeader(screenWidth),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: AppPaddingsResponsive.getScreenPadding(
+                        screenWidth,
                       ),
-
-                      SizedBox(height: AppPaddings.s),
-
-                      // Description
-                      Text(
-                        AppStrings.uploadPhotoDesc1,
-                        style: _getResponsiveDescStyle(screenWidth),
-                        textAlign: TextAlign.center,
+                      child: Column(
+                        children: [
+                          SizedBox(height: screenHeight * 0.08),
+                          _buildProfileIcon(screenWidth),
+                          SizedBox(height: screenHeight * 0.04),
+                          Text(
+                            AppStrings.uploadPhoto,
+                            style: _getResponsiveTitleStyle(screenWidth),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: AppPaddings.s),
+                          Text(
+                            AppStrings.uploadPhotoDesc1,
+                            style: _getResponsiveDescStyle(screenWidth),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: screenHeight * 0.06),
+                          _buildPhotoUploadArea(
+                            screenWidth,
+                            screenHeight,
+                            authProvider.isLoading,
+                          ),
+                          SizedBox(height: screenHeight * 0.08),
+                        ],
                       ),
-
-                      SizedBox(height: screenHeight * 0.06),
-
-                      // Photo Upload Area
-                      _buildPhotoUploadArea(screenWidth, screenHeight),
-
-                      SizedBox(height: screenHeight * 0.08),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-
-              // Bottom Buttons
-              _buildBottomButtons(screenWidth),
-            ],
+                  _buildBottomButtons(screenWidth, authProvider.isLoading),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -179,39 +226,32 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
     );
   }
 
-  Widget _buildPhotoUploadArea(double screenWidth, double screenHeight) {
+  Widget _buildPhotoUploadArea(
+    double screenWidth,
+    double screenHeight,
+    bool isLoading,
+  ) {
     final containerSize = screenWidth >= 768 ? 200.0 : 176.0;
 
     return GestureDetector(
-      onTap: _selectedImage == null ? _pickImage : null,
+      onTap: isLoading || _selectedImage != null ? null : _pickImage,
       child: Container(
         width: containerSize,
         height: containerSize,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(
-            color: AppColors.gray20,
-            width: 1,
-            style: BorderStyle.solid,
-          ),
+          border: Border.all(color: AppColors.gray20, width: 1),
         ),
         child: _selectedImage == null
-            ? _buildUploadPlaceholder(containerSize)
-            : _buildSelectedImage(containerSize),
+            ? _buildUploadPlaceholder(containerSize, isLoading)
+            : _buildSelectedImage(containerSize, isLoading),
       ),
     );
   }
 
-  Widget _buildUploadPlaceholder(double size) {
+  Widget _buildUploadPlaceholder(double size, bool isLoading) {
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: AppColors.gray20,
-          width: 2,
-          style: BorderStyle.none,
-        ),
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(32)),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -223,11 +263,14 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
                 color: AppColors.gray10,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.add,
-                color: AppColors.gray40,
-                size: size * 0.15,
-              ),
+              child: isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(Icons.add, color: AppColors.gray40, size: size * 0.15),
             ),
           ],
         ),
@@ -235,7 +278,7 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
     );
   }
 
-  Widget _buildSelectedImage(double size) {
+  Widget _buildSelectedImage(double size, bool isLoading) {
     return Stack(
       children: [
         Container(
@@ -249,58 +292,77 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
             ),
           ),
         ),
-        Positioned(
-          top: 8,
-          right: 8,
-          child: GestureDetector(
-            onTap: _removeImage,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.black.withOpacity(0.7),
-                shape: BoxShape.circle,
+        if (isLoading)
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              color: Colors.black.withOpacity(0.5),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(
+                color: AppColors.white,
+                strokeWidth: 3,
               ),
-              child: const Icon(Icons.close, color: AppColors.white, size: 20),
             ),
           ),
-        ),
+        if (!isLoading)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: _removeImage,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.black.withOpacity(0.7),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: AppColors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
 
-  Widget _buildBottomButtons(double screenWidth) {
+  Widget _buildBottomButtons(double screenWidth, bool isLoading) {
     return Container(
       padding: AppPaddingsResponsive.getScreenPadding(screenWidth),
       child: Column(
         children: [
-          // Continue Button
           CustomPrimaryButton(
             text: AppStrings.continueBtn,
-            onPressed: _handleContinue,
+            onPressed: (_selectedImage == null || isLoading)
+                ? null
+                : _handleContinue,
+            isLoading: isLoading,
           ),
-
           SizedBox(height: AppPaddings.m),
-
-          // Skip Button
           TextButton(
-            onPressed: _handleSkip,
+            onPressed: isLoading ? null : _handleSkip,
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: Text(
               AppStrings.skip,
-              style: _getResponsiveSkipStyle(screenWidth),
+              style: _getResponsiveSkipStyle(screenWidth).copyWith(
+                color: isLoading ? AppColors.gray50 : AppColors.gray70,
+              ),
             ),
           ),
-
           SizedBox(height: MediaQuery.of(context).padding.bottom),
         ],
       ),
     );
   }
 
-  // Responsive Text Styles
   TextStyle _getResponsiveHeaderStyle(double screenWidth) {
     if (screenWidth >= 1200) {
       return AppTextStyles.heading5;
@@ -333,9 +395,9 @@ class _ProfilePhotoUploadPageState extends State<ProfilePhotoUploadPage> {
 
   TextStyle _getResponsiveSkipStyle(double screenWidth) {
     if (screenWidth >= 768) {
-      return AppTextStyles.bodyLargeMedium.copyWith(color: AppColors.gray70);
+      return AppTextStyles.bodyLargeMedium;
     } else {
-      return AppTextStyles.bodyMediumMedium.copyWith(color: AppColors.gray70);
+      return AppTextStyles.bodyMediumMedium;
     }
   }
 }
