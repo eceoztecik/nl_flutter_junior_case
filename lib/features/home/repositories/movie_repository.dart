@@ -61,7 +61,7 @@ class MovieRepositoryImpl implements MovieRepository {
       final movieListResponse = results[0] as MovieListResponse;
       final favoriteMoviesResponse = results[1] as FavoriteMoviesResponse;
 
-      //Convert your favorite movie IDs to sets
+      // Convert your favorite movie IDs to sets
       final favoriteIds = favoriteMoviesResponse.movies
           .map((movie) => movie.id)
           .toSet();
@@ -73,7 +73,7 @@ class MovieRepositoryImpl implements MovieRepository {
 
       return movieListResponse.movies;
     } catch (e) {
-      //If favorites cannot be retrieved, return only the movie list
+      // If favorites cannot be retrieved, return only the movie list
       try {
         final movieListResponse = await _movieService.getMovies(page: page);
         return movieListResponse.movies;
