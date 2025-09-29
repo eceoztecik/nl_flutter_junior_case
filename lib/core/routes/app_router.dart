@@ -13,19 +13,19 @@ abstract class AppRouter {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.splash:
-        return _createRoute(const SplashScreen());
+        return _createRoute(const SplashScreen(), settings: settings);
 
       case AppRoutes.login:
-        return _createRoute(const LoginView());
+        return _createRoute(const LoginView(), settings: settings);
 
       case AppRoutes.register:
-        return _createRoute(const RegisterView());
+        return _createRoute(const RegisterView(), settings: settings);
       case AppRoutes.home:
-        return _createRoute(TabContainer());
+        return _createRoute(TabContainer(), settings: settings);
       case AppRoutes.profilePhotoUpload:
-        return _createRoute(const ProfilePhotoUploadPage());
+        return _createRoute(const ProfilePhotoUploadPage(), settings: settings);
       case AppRoutes.profile:
-        return _createRoute(const ProfilePage());
+        return _createRoute(const ProfilePage(), settings: settings);
 
       default:
         return _createRoute(_placeholderPage('404 - Page Not Found'));

@@ -12,14 +12,11 @@ class MovieService {
   // GET /movie/list - Paginated movie list
   Future<MovieListResponse> getMovies({int page = 1}) async {
     try {
-      print('🎬 API Request: movie/list?page=$page');
-
       final response = await _apiService.get('movie/list?page=$page');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final movieResponse = MovieListResponse.fromJson(jsonData);
-        print('🎬 Movies count: ${movieResponse.movies.length}');
         return movieResponse;
       } else if (response.statusCode == 401) {
         throw MovieServiceException('Unauthorized - Please login');
@@ -29,7 +26,7 @@ class MovieService {
         );
       }
     } catch (e) {
-      print('🎬 Error: $e');
+      print('Error: $e');
       if (e is MovieServiceException) rethrow;
       throw MovieServiceException('Network error: $e');
     }
