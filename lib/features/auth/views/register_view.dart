@@ -60,7 +60,11 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
       if (mounted) {
         if (success) {
           // Registration successful - navigate to profile photo upload
-          Navigator.pushNamed(context, '/profile-photo-upload');
+          Navigator.pushNamed(
+            context,
+            '/profile-photo-upload',
+            arguments: {'fromRegister': true},
+          );
         } else {
           // Show error message
           if (authProvider.errorMessage != null) {
@@ -188,7 +192,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
 
           SizedBox(height: AppPaddings.s),
 
-          Text('Hesap Oluştur', style: AppTextStyles.heading4),
+          Text(AppStrings.createAccount, style: AppTextStyles.heading4),
 
           SizedBox(height: AppPaddings.xs),
 
@@ -238,7 +242,7 @@ class _RegisterViewState extends State<RegisterView> with ValidatorsMixin {
 
   Widget _buildConfirmPasswordField() {
     return CustomTextField(
-      hintText: 'Şifre Tekrar',
+      hintText: AppStrings.confirmPassword,
       controller: _confirmPasswordController,
       isPassword: true,
       prefixIcon: Icons.lock_outline,
