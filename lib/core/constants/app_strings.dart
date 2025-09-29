@@ -39,7 +39,9 @@ class AppStrings {
   static const String lastEpisode = 'Son Ana Kadar';
   static const String homeDescription =
       'Birbirine derinden bağlı iki çocukluk arkadaşı olan Sydney ve Karl';
-  static const String continueWatching = 'Devamı Oku';
+  static const String continueWatching = 'Devamını Oku';
+  static const String showLess = 'Daha Az Göster';
+  static const String noDescription = 'Açıklama bulunamadı';
 
   // Navigation
   static const String home = 'Anasayfa';
@@ -52,6 +54,11 @@ class AppStrings {
   static const String userIdLabel = 'ID: 245677';
   static const String addPhotoBtn = 'Fotoğraf Ekle';
   static const String myFavorites = 'Beğendiklerim';
+  static const String favoritesLoadError = 'Favoriler yüklenemedi';
+  static const String retryButton = 'Tekrar Dene';
+  static const String noFavoritesYet = 'Henüz favori film eklemediniz';
+  static const String defaultUserName = 'Kullanıcı';
+  static const String unknownId = 'Unknown';
 
   // Movie Titles from Profile
   static const String loveAgain = 'Aşk Yeniden';
