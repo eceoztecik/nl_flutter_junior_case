@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:jr_case_boilerplate/core/constants/app_colors.dart';
 import 'package:jr_case_boilerplate/core/constants/app_paddings.dart';
+import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
+import 'package:jr_case_boilerplate/core/constants/app_text_styles.dart';
 import 'package:jr_case_boilerplate/core/extensions/app/app_padding_ext.dart';
 
 class HomeMovieListItem extends StatefulWidget {
@@ -27,6 +30,7 @@ class _HomeMovieListItemState extends State<HomeMovieListItem>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late bool _isLiked;
+  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -60,6 +64,12 @@ class _HomeMovieListItemState extends State<HomeMovieListItem>
     });
 
     widget.onFavoriteToggle?.call();
+  }
+
+  void _toggleExpand() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
   }
 
   Widget _buildPosterImage() {
@@ -217,16 +227,14 @@ class _HomeMovieListItemState extends State<HomeMovieListItem>
                               width: screenWidth >= 768 ? 32 : 28,
                               height: screenWidth >= 768 ? 32 : 28,
                               decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(4),
+                                color: AppColors.primary,
+                                borderRadius: BorderRadius.circular(80),
                               ),
                               child: Center(
                                 child: Text(
                                   'N',
-                                  style: TextStyle(
-                                    color: Colors.white,
+                                  style: AppTextStyles.bodyLargeBold.copyWith(
                                     fontSize: screenWidth >= 768 ? 20 : 18,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
@@ -238,14 +246,12 @@ class _HomeMovieListItemState extends State<HomeMovieListItem>
                                 children: [
                                   Text(
                                     widget.title,
-                                    style: TextStyle(
-                                      color: Colors.white,
+                                    style: AppTextStyles.heading4.copyWith(
                                       fontSize: screenWidth >= 1200
                                           ? 32
                                           : screenWidth >= 768
                                           ? 28
                                           : 24,
-                                      fontWeight: FontWeight.bold,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
@@ -254,41 +260,38 @@ class _HomeMovieListItemState extends State<HomeMovieListItem>
                                   Text(
                                     widget.description?.isNotEmpty == true
                                         ? widget.description!
-                                        : 'Açıklama bulunamadı',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: screenWidth >= 1200
-                                          ? 18
-                                          : screenWidth >= 768
-                                          ? 16
-                                          : 14,
-                                      height: 1.4,
-                                    ),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
+                                        : AppStrings.noDescription,
+                                    style: AppTextStyles.bodyLargeRegular
+                                        .copyWith(
+                                          fontSize: screenWidth >= 1200
+                                              ? 18
+                                              : screenWidth >= 768
+                                              ? 16
+                                              : 14,
+                                          color: Colors.white.withOpacity(0.8),
+                                        ),
+                                    maxLines: _isExpanded ? null : 3,
+                                    overflow: _isExpanded
+                                        ? TextOverflow.visible
+                                        : TextOverflow.ellipsis,
                                   ),
                                   SizedBox(height: AppPaddings.xs),
                                   GestureDetector(
-                                    onTap: () {},
-                                    child: RichText(
-                                      text: TextSpan(
-                                        children: [
-                                          TextSpan(
-                                            text: 'DevamınıOku',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: screenWidth >= 1200
-                                                  ? 18
-                                                  : screenWidth >= 768
-                                                  ? 16
-                                                  : 14,
-                                              fontWeight: FontWeight.w600,
-                                              decoration:
-                                                  TextDecoration.underline,
-                                            ),
+                                    onTap: _toggleExpand,
+                                    child: Text(
+                                      _isExpanded
+                                          ? AppStrings.showLess
+                                          : AppStrings.continueWatching,
+                                      style: AppTextStyles.bodyLargeSemibold
+                                          .copyWith(
+                                            fontSize: screenWidth >= 1200
+                                                ? 18
+                                                : screenWidth >= 768
+                                                ? 16
+                                                : 14,
+                                            decoration:
+                                                TextDecoration.underline,
                                           ),
-                                        ],
-                                      ),
                                     ),
                                   ),
                                 ],
