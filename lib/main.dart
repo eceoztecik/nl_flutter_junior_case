@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:jr_case_boilerplate/features/home/providers/movie_providers.dart';
 import 'package:provider/provider.dart';
 import 'package:jr_case_boilerplate/core/routes/app_router.dart';
-import 'package:jr_case_boilerplate/core/routes/app_routes.dart';
 import 'package:jr_case_boilerplate/core/constants/app_strings.dart';
 import 'package:jr_case_boilerplate/features/auth/providers/auth_provider.dart';
+import 'package:jr_case_boilerplate/features/auth/repositories/auth_repository.dart';
+import 'package:jr_case_boilerplate/tab_container.dart';
+import 'package:jr_case_boilerplate/features/auth/views/login_view.dart';
+import 'package:jr_case_boilerplate/core/services/storage_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // StorageService initialize
+  await StorageService.init();
+
   runApp(const ShartflixApp());
 }
 
@@ -15,21 +24,57 @@ class ShartflixApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => AuthProvider())],
-      child: MaterialApp(
-        title: AppStrings.appName,
-        //theme: AppTheme.darkTheme,
-        debugShowCheckedModeBanner: false,
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, MovieProvider>(
+          create: (_) => MovieProvider(),
+          update: (context, authProvider, movieProvider) {
+            final provider = movieProvider ?? MovieProvider();
 
-        // Initial route
-        initialRoute: AppRoutes.initial,
+            if (authProvider.isAuthenticated) {
+              _setTokenToMovieProvider(provider);
+            }
+            return provider;
+          },
+        ),
+      ],
+      child: Consumer<AuthProvider>(
+        builder: (context, authProvider, child) {
+          if (authProvider.status == AuthStatus.initial) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: Scaffold(
+                backgroundColor: Colors.black,
+                body: Center(
+                  child: CircularProgressIndicator(color: Colors.red),
+                ),
+              ),
+            );
+          }
 
-        // Static routes
-        routes: AppRouter.getRoutes(),
-
-        // Dynamic route generator
-        onGenerateRoute: AppRouter.onGenerateRoute,
+          return MaterialApp(
+            title: AppStrings.appName,
+            debugShowCheckedModeBanner: false,
+            home: authProvider.isAuthenticated
+                ? TabContainer()
+                : const LoginView(),
+            routes: AppRouter.getRoutes(),
+            onGenerateRoute: AppRouter.onGenerateRoute,
+          );
+        },
       ),
     );
+  }
+
+  void _setTokenToMovieProvider(MovieProvider provider) async {
+    try {
+      final authRepo = AuthRepository();
+      final token = await authRepo.getStoredToken();
+      if (token != null) {
+        provider.setAuthToken(token);
+      }
+    } catch (e) {
+      print('Token error: $e');
+    }
   }
 }
