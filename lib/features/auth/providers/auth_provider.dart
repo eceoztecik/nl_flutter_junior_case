@@ -28,6 +28,8 @@ class AuthProvider extends ChangeNotifier {
   // Check if user is already logged in
   Future<void> _checkInitialAuthStatus() async {
     try {
+      await Future.delayed(Duration(seconds: 2));
+
       _setLoading(true);
 
       final isLoggedIn = await _authRepository.isLoggedIn();
