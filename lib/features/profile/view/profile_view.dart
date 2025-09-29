@@ -223,7 +223,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     )
                   else
                     Text(
-                      user?.name ?? 'Kullanıcı',
+                      user?.name ?? AppStrings.defaultUserName,
                       style: _getResponsiveNameStyle(screenWidth),
                     ),
 
@@ -250,13 +250,10 @@ class _ProfilePageState extends State<ProfilePage> {
             // Add Photo Button
             GestureDetector(
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Fotoğraf yükleme özelliği yakında eklenecek',
-                    ),
-                    backgroundColor: AppColors.primary,
-                  ),
+                Navigator.pushNamed(
+                  context,
+                  '/profile-photo-upload',
+                  arguments: {'fromRegister': false},
                 );
               },
               child: Container(
